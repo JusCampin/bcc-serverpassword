@@ -1,4 +1,6 @@
+BccUtils = exports['bcc-utils'].initiate()
 DeferralCards = exports['bcc-deferralcards'].DeferralCards()
+
 local states = {}
 
 local createTable = function()
@@ -71,7 +73,7 @@ function PresentError(s, deferral, cb)
     })
 
     deferral.presentCard(card, function(data, rawData)
-        if data.submitId == 'back_button' then 
+        if data.submitId == 'back_button' then
             PresentLogin(s, deferral, cb)
         end
     end)
@@ -116,13 +118,13 @@ function PresentLogin(s, deferral, cb)
 
 
     deferral.presentCard(card, function(data, rawData)
-        if data.submitId == 'submit_join' then 
+        if data.submitId == 'submit_join' then
             if Config.Password == data.password then
                 deferral.update(Config.lang.connecting)
                 Wait(1000)
                 deferral.done()
                 cb()
-            else         
+            else
                 states[s].attempts = states[s].attempts + 1
                 PresentError(s, deferral, cb)
             end
@@ -138,6 +140,15 @@ AddEventHandler('playerConnecting', function(name, skr, deferral)
     local steamid = GetSteamID(_src)
     local s = tonumber(_src)
     Wait(50)
+
+    -- Checks if the user belongs to an authentication-exempt group
+    local userGroup = exports.ghmattimysql:executeSync("SELECT `group` FROM users WHERE identifier=@id;", {['@id'] = steamid})[1].group
+    for _, skipGroup in ipairs(Config.skipGroup) do
+        if userGroup == skipGroup then
+            deferral.done()
+            return
+        end
+    end
 
     if s == nil then
         deferral.done(Config.lang.notfound)
@@ -186,7 +197,7 @@ AddEventHandler('playerConnecting', function(name, skr, deferral)
                             end)
                         end
                     end
-    
+
                     if breakLoop then break end
                     Wait(1000)
                 end
@@ -194,3 +205,5 @@ AddEventHandler('playerConnecting', function(name, skr, deferral)
         end
     end
 end)
+
+BccUtils.Versioner.checkFile(GetCurrentResourceName(), 'https://github.com/BryceCanyonCounty/bcc-serverpassword')
